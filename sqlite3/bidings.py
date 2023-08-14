@@ -28,7 +28,8 @@ sql = (
 )
 
 # registrando valores nas colunas da tabela
-cursor.execute(sql, ['Richard', 14])
+# cursor.execute(sql, ['Richard', 14])
+cursor.executemany(sql, [['Maria', 14], ['Wellington', 18]])
 connection.commit()
 print(sql)
 cursor.close()
