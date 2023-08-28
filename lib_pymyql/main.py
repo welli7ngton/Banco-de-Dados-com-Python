@@ -1,129 +1,177 @@
+# PyMySQL - um cliente MySQL feito em Python Puro
+# Doc: https://pymysql.readthedocs.io/en/latest/
+# Pypy: https://pypi.org/project/pymysql/
+# GitHub: https://github.com/PyMySQL/PyMySQL
+import os
+from typing import cast
+
+import dotenv
 import pymysql
 import pymysql.cursors
-import dotenv
-import os
 
 TABLE_NAME = 'customers'
+CURRENT_CURSOR = pymysql.cursors.DictCursor
 
 dotenv.load_dotenv()
+
 connection = pymysql.connect(
-    host=os.environ["MYSQL_HOST"],
-    user=os.environ["MYSQL_USER"],
-    passwd=os.environ["MYSQL_PASSWORD"],
-    database=os.environ["MYSQL_DATABASE"],
-    cursorclass=pymysql.cursors.DictCursor,
+    host=os.environ['MYSQL_HOST'],
+    user=os.environ['MYSQL_USER'],
+    password=os.environ['MYSQL_PASSWORD'],
+    database=os.environ['MYSQL_DATABASE'],
+    charset='utf8mb4',
+    cursorclass=CURRENT_CURSOR,
 )
 
 with connection:
     with connection.cursor() as cursor:
-        cursor.execute(
+        cursor.execute(  # type: ignore
             f'CREATE TABLE IF NOT EXISTS {TABLE_NAME} ('
             'id INT NOT NULL AUTO_INCREMENT, '
-            'name VARCHAR(50) NOT NULL, '
-            'age INT NOT NULL, '
+            'nome VARCHAR(50) NOT NULL, '
+            'idade INT NOT NULL, '
             'PRIMARY KEY (id)'
             ') '
         )
-        # TRUNCATE TABLE APAGA A TABELA POR COMPLETO
-        cursor.execute(f'TRUNCATE TABLE {TABLE_NAME}')
+        # CUIDADO: ISSO LIMPA A TABELA
+        cursor.execute(f'TRUNCATE TABLE {TABLE_NAME}')  # type: ignore
     connection.commit()
 
+    # Começo a manipular dados a partir daqui
+
+    # Inserindo um valor usando placeholder e um iterável
     with connection.cursor() as cursor:
         sql = (
             f'INSERT INTO {TABLE_NAME} '
-            '(name, age) '
-            'VALUES(%(name)s, %(age)s) '
+            '(nome, idade) '
+            'VALUES '
+            '(%s, %s) '
         )
-        data = (
-            {
-                "name": "Luiz",
-                "age": 27
-            },            {
-                "name": "Wellington",
-                "age": 20
-            },            {
-                "name": "Roger",
-                "age": 14
-            },            {
-                "name": "Pedro",
-                "age": 19
-            },
-
-        )
-        result = cursor.executemany(sql, data)
-        # print(sql)
-        # print(data)
+        data = ('Luiz', 18)
+        result = cursor.execute(sql, data)  # type: ignore
+        # print(sql, data)
         # print(result)
     connection.commit()
 
+    # Inserindo um valor usando placeholder e um dicionário
     with connection.cursor() as cursor:
         sql = (
             f'INSERT INTO {TABLE_NAME} '
-            '(name, age) '
-            'VALUES(%s, %s) '
+            '(nome, idade) '
+            'VALUES '
+            '(%(name)s, %(age)s) '
         )
-        data1 = (
-            ("maria", 18), ("raimundo", 78)
-        )
-        result = cursor.executemany(sql, data1)
+        data2 = {
+            "age": 37,
+            "name": "Le",
+        }
+        result = cursor.execute(sql, data2)  # type: ignore
         # print(sql)
-        # print(data1)
+        # print(data2)
         # print(result)
     connection.commit()
 
+    # Inserindo vários valores usando placeholder e um tupla de dicionários
     with connection.cursor() as cursor:
-        # menor_id = input("digite o menor id: ")
-        # maior_id = input("digite o maior id: ")
+        sql = (
+            f'INSERT INTO {TABLE_NAME} '
+            '(nome, idade) '
+            'VALUES '
+            '(%(name)s, %(age)s) '
+        )
+        data3 = (
+            {"name": "Sah", "age": 33, },
+            {"name": "Júlia", "age": 74, },
+            {"name": "Rose", "age": 53, },
+        )
+        result = cursor.executemany(sql, data3)  # type: ignore
+        # print(sql)
+        # print(data3)
+        # print(result)
+    connection.commit()
+
+    # Inserindo vários valores usando placeholder e um tupla de tuplas
+    with connection.cursor() as cursor:
+        sql = (
+            f'INSERT INTO {TABLE_NAME} '
+            '(nome, idade) '
+            'VALUES '
+            '(%s, %s) '
+        )
+        data4 = (
+            ("Siri", 22, ),
+            ("Helena", 15, ),
+            ("Luiz", 18, ),
+        )
+        result = cursor.executemany(sql, data4)  # type: ignore
+        # print(sql)
+        # print(data4)
+        # print(result)
+    connection.commit()
+
+    # Lendo os valores com SELECT
+    with connection.cursor() as cursor:
+        # menor_id = int(input('Digite o menor id: '))
+        # maior_id = int(input('Digite o maior id: '))
         menor_id = 2
         maior_id = 4
+
         sql = (
             f'SELECT * FROM {TABLE_NAME} '
-            'WHERE id >= %s AND id <= %s'
+            'WHERE id BETWEEN %s AND %s  '
         )
 
-        cursor.execute(sql, (menor_id, maior_id))
-        # print(cursor.mogrify(sql, (menor_id, maior_id)))
+        cursor.execute(sql, (menor_id, maior_id))  # type: ignore
+        # print(cursor.mogrify(sql, (menor_id, maior_id)))  # type: ignore
+        data5 = cursor.fetchall()  # type: ignore
 
-        data2 = cursor.fetchall()
+        # for row in data5:
+        # print(row)
 
-        # for value in data2:
-        #     print(value)
-
+    # Apagando com DELETE, WHERE e placeholders no PyMySQL
     with connection.cursor() as cursor:
         sql = (
             f'DELETE FROM {TABLE_NAME} '
             'WHERE id = %s'
         )
+        cursor.execute(sql, (1,))  # type: ignore
+        connection.commit()
 
-        # cursor.execute(sql, (1))
-        # cursor.execute(sql, (2))
-        # cursor.execute(sql, (3))
-        # connection.commit()
+        cursor.execute(f'SELECT * FROM {TABLE_NAME} ')  # type: ignore
 
-        # cursor.execute(f'SELECT * FROM {TABLE_NAME} ')
+        # for row in cursor.fetchall():  # type: ignore
+        #     print(row)
 
-        # for value in cursor.fetchall():
-        #     print(value)
-
+    # Editando com UPDATE, WHERE e placeholders no PyMySQL
     with connection.cursor() as cursor:
+        cursor = cast(CURRENT_CURSOR, cursor)
+
         sql = (
             f'UPDATE {TABLE_NAME} '
-            'SET name=%s, age=%s '
+            'SET nome=%s, idade=%s '
             'WHERE id=%s'
         )
+        cursor.execute(sql, ('Eleonor', 102, 4))
 
-        # cursor.execute(sql, ("teste", 99, 1))
-        # connection.commit()
-        # cursor.execute(sql, ("RAIMUNDO", 75, 6))
-        # connection.commit()
+        cursor.execute(
+            f'SELECT id from {TABLE_NAME} ORDER BY id DESC LIMIT 1'
+        )
+        lastIdFromSelect = cursor.fetchone()
 
-        # cursor.execute(f'SELECT * FROM {TABLE_NAME} ')
+        resultFromSelect = cursor.execute(f'SELECT * FROM {TABLE_NAME} ')
 
-        # for value in cursor.fetchall():
-        #     print(value)
+        data6 = cursor.fetchall()
 
-    with connection.cursor() as cursor:
-        cursor.execute(f'SELECT * FROM {TABLE_NAME} ')
+        for row in data6:
+            print(row)
 
-        for value in cursor.fetchall():
-            print(value)
+        print('resultFromSelect', resultFromSelect)
+        print('len(data6)', len(data6))
+        print('rowcount', cursor.rowcount)
+        print('lastrowid', cursor.lastrowid)
+        print('lastrowid na mão', lastIdFromSelect)
+
+        cursor.scroll(0, 'absolute')
+        print('rownumber', cursor.rownumber)
+
+    connection.commit()
